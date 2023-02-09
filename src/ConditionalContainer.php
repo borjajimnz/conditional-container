@@ -53,14 +53,12 @@ class ConditionalContainer extends Field
      */
     public function __construct(array $fields)
     {
-
         parent::__construct('conditional_container_' . Str::random(10));
 
         $this->fields = collect($fields);
         $this->expressions = collect();
 
         $this->withMeta([ 'operation' => 'some' ]);
-
     }
 
     public function if($expression): self
@@ -90,24 +88,17 @@ class ConditionalContainer extends Field
          * Avoid unselected fields coming with pre-filled data on update
          */
         if (resolve(NovaRequest::class)->route()->controller instanceof UpdateFieldController) {
-
             if (count($this->resolveDependencyFieldUsingResource($resource)) === 0) {
-
                 return;
-
             }
-
         }
 
         /**
          * @var Field $field
          */
         foreach ($this->fields as $field) {
-
             $field->resolve($resource, $field->attribute);
-
         }
-
     }
 
     public function resolveForAction($request)
@@ -118,37 +109,28 @@ class ConditionalContainer extends Field
 
         $this->withMeta([ 'expressionsMap' => $expressionsMap ]);
 
-        return $this->resolveUsing(function () { });
+        return $this->resolveUsing(function () {
+        });
     }
 
     public function fill(NovaRequest $request, $model)
     {
-
         $callbacks = [];
 
         /**
          * @var Field $field
          */
         foreach ($this->fields as $field) {
-
             $callbacks[] = $field->fill($request, $model);
-
         }
 
         return function () use ($callbacks) {
-
             foreach ($callbacks as $callback) {
-
                 if (is_callable($callback)) {
-
                     call_user_func($callback);
-
                 }
-
             }
-
         };
-
     }
 
     public function useAndOperator(): self
@@ -158,36 +140,27 @@ class ConditionalContainer extends Field
 
     private function relationalOperatorLeafResolver(Collection $values, string $literal): bool
     {
-
         [ $attribute, $operator, $value ] = $this->splitLiteral($literal);
 
         if ($values->keys()->contains($attribute)) {
-
             return $this->executeCondition($values->get($attribute), $operator, $value);
-
         }
 
         return false;
-
     }
 
     private function executeCondition($attributeValue, string $operator, $conditionValue): bool
     {
-
         $conditionValue = trim($conditionValue, '"\'');
 
         if (in_array($operator, [ '<', '>', '<=', '>=' ]) && $conditionValue ||
             (is_numeric($attributeValue) && is_numeric($conditionValue))) {
-
             $conditionValue = (int) $conditionValue;
             $attributeValue = (int) $attributeValue;
-
         }
 
         if (in_array($conditionValue, [ 'true', 'false' ])) {
-
             $conditionValue = $conditionValue === 'true';
-
         }
 
         switch ($operator) {
@@ -219,9 +192,7 @@ class ConditionalContainer extends Field
                  * On the javascript side it uses ('' || []).includes() which works with array and string
                  */
                 if ($attributeValue instanceof Collection) {
-
                     return $attributeValue->contains($conditionValue);
-
                 }
 
                 return Str::contains($attributeValue, $conditionValue);
@@ -232,16 +203,14 @@ class ConditionalContainer extends Field
             case 'endsWith':
             case 'ends with':
                 return Str::endsWith($attributeValue, $conditionValue);
-            default :
+            default:
                 return false;
 
         }
-
     }
 
     public static function splitLiteral(string $literal): array
     {
-
         $operator = collect(self::OPERATORS)
             ->filter(function ($operator) use ($literal) {
                 return Str::of($literal)->replace('->', '.')->contains($operator);
@@ -257,13 +226,11 @@ class ConditionalContainer extends Field
             $operator,
             $value,
         ];
-
     }
 
     public function runConditions(Collection $values): bool
     {
         return $this->expressions->{$this->meta[ 'operation' ]}(function ($expression) use ($values) {
-
             $parser = new Logipar();
             $parser->parse(is_callable($expression) ? $expression() : $expression);
 
@@ -278,7 +245,6 @@ class ConditionalContainer extends Field
                     ];
                 })
             );
-
         });
     }
 
@@ -290,7 +256,6 @@ class ConditionalContainer extends Field
      */
     public function resolveDependencyFieldUsingRequest($resource, NovaRequest $request): array
     {
-
         $matched = $this->runConditions(collect($request->toArray()));
 
         /**
@@ -301,9 +266,7 @@ class ConditionalContainer extends Field
          * Therefore avoiding format conflicts
          */
         if ($matched && $request->route()->controller instanceof ResourceUpdateController) {
-
             foreach ($this->fields as $field) {
-
                 if ($field instanceof Field &&
                     !blank($field->attribute) &&
                     !$field->isReadonly($request) &&
@@ -314,17 +277,12 @@ class ConditionalContainer extends Field
                     !$field instanceof \Ebess\AdvancedNovaMediaLibrary\Fields\Media &&
                     !$field instanceof \Ebess\AdvancedNovaMediaLibrary\Fields\Files &&
                     !$field instanceof \DigitalCreative\ConditionalContainer\ConditionalContainer) {
-
                     $resource->setAttribute($field->attribute, $field->value);
-
                 }
-
             }
-
         }
 
         return $matched ? $this->fields->toArray() : [];
-
     }
 
     /**
@@ -334,13 +292,11 @@ class ConditionalContainer extends Field
      */
     public function resolveDependencyFieldUsingResource($resource): array
     {
-
         $matched = $this->runConditions(
             $this->flattenRelationships($resource)
         );
 
         return $matched ? $this->fields->toArray() : [];
-
     }
 
     /**
@@ -350,25 +306,17 @@ class ConditionalContainer extends Field
      */
     private function flattenRelationships($resource): Collection
     {
-
         $data = collect($resource->toArray());
 
         foreach ($resource->getRelations() as $relationName => $relation) {
-
             if ($relation instanceof Collection) {
-
                 $data->put($relationName, $relation->map->getKey());
-
-            } else if ($relation instanceof Model) {
-
+            } elseif ($relation instanceof Model) {
                 $data->put($relationName, $relation->getKey());
-
             }
-
         }
 
         return $data;
-
     }
 
     public function jsonSerialize()
@@ -376,11 +324,42 @@ class ConditionalContainer extends Field
         return array_merge([
             'fields' => $this->fields,
             'expressions' => $this->expressions->map(function ($expression) {
-
                 return is_callable($expression) ? $expression() : $expression;
-
             }),
         ], parent::jsonSerialize());
     }
 
+    public function getCreationRules(NovaRequest $request)
+    {
+        $rules = [$this->attribute => is_callable($this->creationRules)
+            ? call_user_func($this->creationRules, $request)
+            : $this->creationRules, ];
+        $call = $request->all();
+        foreach ($this->fields as $field) {
+            if (array_key_exists($field->attribute, $call)) {
+                $rules[$field->attribute] = $field->getCreationRules($request);
+            }
+        }
+        return array_merge_recursive(
+            $this->getRules($request),
+            $rules
+        );
+    }
+
+    public function getUpdateRules(NovaRequest $request)
+    {
+        $rules = [$this->attribute => is_callable($this->creationRules)
+            ? call_user_func($this->creationRules, $request)
+            : $this->creationRules, ];
+        $call = $request->all();
+        foreach ($this->fields as $field) {
+            if (array_key_exists($field->attribute, $call)) {
+                $rules[$field->attribute] = $field->getUpdateRules($request);
+            }
+        }
+        return array_merge_recursive(
+            $this->getRules($request),
+            $rules
+        );
+    }
 }

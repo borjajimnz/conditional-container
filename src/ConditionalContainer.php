@@ -337,7 +337,7 @@ class ConditionalContainer extends Field
         $call = $request->all();
         foreach ($this->fields as $field) {
             if (array_key_exists($field->attribute, $call)) {
-                $rules[$field->attribute] = $field->getCreationRules($request);
+                $rules[$field->attribute] = data_get($field->getCreationRules($request), $field->attribute, []);
             }
         }
         return array_merge_recursive(
@@ -354,7 +354,7 @@ class ConditionalContainer extends Field
         $call = $request->all();
         foreach ($this->fields as $field) {
             if (array_key_exists($field->attribute, $call)) {
-                $rules[$field->attribute] = $field->getUpdateRules($request);
+                $rules[$field->attribute] = data_get($field->getCreationRules($request), $field->attribute, []);
             }
         }
         return array_merge_recursive(

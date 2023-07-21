@@ -348,15 +348,16 @@ class ConditionalContainer extends Field
 
     public function getUpdateRules(NovaRequest $request)
     {
-        $rules = [$this->attribute => is_callable($this->creationRules)
-            ? call_user_func($this->creationRules, $request)
-            : $this->creationRules, ];
+        $rules = [$this->attribute => is_callable($this->updateRules)
+            ? call_user_func($this->updateRules, $request)
+            : $this->updateRules, ];
         $call = $request->all();
         foreach ($this->fields as $field) {
             if (array_key_exists($field->attribute, $call)) {
-                $rules[$field->attribute] = data_get($field->getCreationRules($request), $field->attribute, []);
+                $rules[$field->attribute] = data_get($field->getUpdateRules($request), $field->attribute, []);
             }
         }
+        \Log::error($rules);
         return array_merge_recursive(
             $this->getRules($request),
             $rules
